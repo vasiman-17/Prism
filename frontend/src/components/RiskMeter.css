@@ -1,0 +1,73 @@
+/* Risk Meter Container */
+.risk-meter-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 32px;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+/* Label Row */
+.risk-meter-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.risk-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 12px;
+  color: #555555;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.risk-counter {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 96px;
+  font-weight: 400;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+/* Progress Bar Track */
+.risk-meter-track {
+  width: 100%;
+  height: 6px;
+  background: #0f0f0f;
+  border: 1px solid #1e1e1e;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.risk-meter-fill {
+  height: 100%;
+  width: 0%;
+  transition: box-shadow 0.2s ease;
+}
+
+/* Verdict Text */
+.risk-verdict {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 400;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .risk-meter-container {
+    padding: 32px 20px;
+  }
+
+  .risk-counter {
+    font-size: 64px;
+  }
+
+  .risk-verdict {
+    font-size: 16px;
+  }
+}

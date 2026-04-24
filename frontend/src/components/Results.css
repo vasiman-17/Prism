@@ -1,0 +1,286 @@
+/* Results Page */
+.results-page {
+  width: 100%;
+  background: #030303;
+  padding-top: 80px;
+}
+
+/* ==================== SECTION 1: PR HEADER ==================== */
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+  padding: 20px 32px;
+  background: #0f0f0f;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.header-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 10px;
+  color: #ff3d00;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 400;
+  margin-bottom: 8px;
+}
+
+.header-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  color: #f0ede5;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.header-url {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  color: #333333;
+  text-decoration: none;
+  word-break: break-all;
+  display: block;
+}
+
+.header-url:hover {
+  color: #555555;
+}
+
+.header-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.stat-chip {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 12px;
+  padding: 6px 12px;
+  background: #0a0a0a;
+  border: 1px solid #1e1e1e;
+  color: #f0ede5;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.stat-chip.additions {
+  color: #3ecf8e;
+}
+
+.stat-chip.deletions {
+  color: #ff3d00;
+}
+
+/* ==================== SECTION 3: REVIEW CARDS ==================== */
+.cards-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.review-card {
+  background: #0f0f0f;
+  border: 1px solid #1e1e1e;
+  border-left: 3px solid;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  perspective: 1000px;
+}
+
+.review-card.verdict-card {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.card-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 11px;
+  color: #f0ede5;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin: 0 0 16px 0;
+  font-weight: 400;
+}
+
+.card-content {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  color: #ccc;
+  line-height: 1.6;
+}
+
+/* Summary Content */
+.summary-content {
+  word-spacing: 0.1em;
+}
+
+.summary-word {
+  display: inline;
+}
+
+/* Risks Content */
+.risk-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #1a1a1a;
+  margin-bottom: 12px;
+}
+
+.risk-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.risk-icon {
+  color: #ff3d00;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.risk-text {
+  color: #ccc;
+  font-size: 13px;
+}
+
+/* Suggestions Content */
+.suggestion-item {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.suggestion-title {
+  font-weight: 500;
+  color: #f0ede5;
+  margin-bottom: 4px;
+}
+
+.suggestion-detail {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.suggestion-code {
+  background: #060606;
+  border: 1px solid #1a1a1a;
+  border-left: 2px solid #3ecf8e;
+  padding: 10px 14px;
+  margin-top: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: #3ecf8e;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Verdict Card */
+.verdict-large {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(32px, 4vw, 48px);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.verdict-reasoning {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  color: #555;
+  font-style: italic;
+  text-align: center;
+}
+
+/* ==================== SECTION 4: BOTTOM BAR ==================== */
+.results-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32px 24px;
+  border-top: 1px solid #1e1e1e;
+  background: #0f0f0f;
+}
+
+.footer-brand {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  color: #333;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.reset-button {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid #1e1e1e;
+  color: #555;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.reset-button:hover {
+  border-color: #ff3d00;
+  color: #ff3d00;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 768px) {
+  .results-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .header-stats {
+    flex-wrap: wrap;
+  }
+
+  .cards-container {
+    grid-template-columns: 1fr;
+    padding: 32px 16px;
+  }
+
+  .review-card {
+    padding: 18px;
+  }
+
+  .verdict-large {
+    font-size: clamp(24px, 3vw, 36px);
+  }
+
+  .results-footer {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+}
