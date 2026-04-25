@@ -1,12 +1,18 @@
+import os
 import re
 import requests
 
 
-# GitHub API headers
-GITHUB_HEADERS = {
-    "User-Agent": "PRism-App",
-    "Accept": "application/vnd.github.v3+json"
-}
+def _get_github_headers():
+    """Build GitHub API headers, including auth token if available."""
+    headers = {
+        "User-Agent": "PRism-App",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    token = os.getenv("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"token {token}"
+    return headers
 
 
 def parse_pr_url(pr_url):
@@ -32,17 +38,21 @@ def get_pr_data(pr_url):
     files_url_api = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pull_number}/files"
 
     try:
+        headers = _get_github_headers()
+
         # Fetch PR metadata
-        pr_response = requests.get(pr_url_api, headers=GITHUB_HEADERS, timeout=10)
+        pr_response = requests.get(pr_url_api, headers=headers, timeout=10)
 
         if pr_response.status_code != 200:
             if pr_response.status_code == 404:
                 raise Exception("Pull request not found. Make sure the URL is correct and the repo is public.")
+            if pr_response.status_code == 403:
+                raise Exception("GitHub API rate limit exceeded. Please try again in a few minutes.")
             raise Exception(f"GitHub API returned status {pr_response.status_code}")
         pr = pr_response.json()
 
         # Fetch PR files and diffs
-        files_response = requests.get(files_url_api, headers=GITHUB_HEADERS, timeout=10)
+        files_response = requests.get(files_url_api, headers=headers, timeout=10)
         if files_response.status_code != 200:
             raise Exception(f"GitHub API returned status {files_response.status_code}")
         files = files_response.json()
