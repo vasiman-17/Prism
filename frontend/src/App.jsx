@@ -79,7 +79,7 @@ function App() {
 
       {/* Layer 1: Main Content */}
       <div className="content">
-        <div ref={pageRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
+        <div ref={pageRef} style={{ width: '100%', position: 'relative' }}>
           {internalState === 'landing' && (
             <Hero onAnalyze={handleAnalyze} onError={handleError} />
           )}
