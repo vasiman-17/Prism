@@ -41,19 +41,7 @@ export default function Hero({ onAnalyze, onError }) {
 
   return (
     <div className="hero-container" ref={heroRef}>
-      {/* Navbar */}
-      <nav className="navbar">
-        <div className="navbar-left">
-          <div className="logo">
-            <span className="logo-pr">PR</span>
-            <span className="logo-ism">ism</span>
-            <div className="logo-dot"></div>
-          </div>
-        </div>
-        <div className="navbar-right">
-          <a href="https://github.com/vasiman-17/Prism" target="_blank" rel="noopener noreferrer" className="nav-link">GITHUB</a>
-        </div>
-      </nav>
+
 
       {/* Hero Content */}
       <div className="hero-content">

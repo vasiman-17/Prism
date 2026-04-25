@@ -33,8 +33,7 @@ Respond with exactly this JSON structure:
   "plain_summary": "2-3 sentences explaining what this PR does in plain English",
   "risks": [
     "specific risk or bug 1",
-    "specific risk or bug 2",
-    "specific risk or bug 3"
+    "specific risk or bug 2"
   ],
   "suggestions": [
     {{
@@ -46,17 +45,23 @@ Respond with exactly this JSON structure:
   "risk_score": 45
 }}
 
-Risk score 0-100. Base it on: number of files changed, presence of error handling, security patterns, complexity of changes.
+CRITICAL: Risk score MUST be a realistic integer between 0 and 100.
+- A small typo fix or readme update should be 0-10.
+- A standard bug fix or feature should be 20-40.
+- Risky changes (auth, db schema, large refactors) should be 60-90.
+DO NOT default to 60. Actually evaluate the risk based on the diff.
 Respond with JSON only. No markdown. No explanation."""
 
     try:
         message = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama-3.3-70b-versatile",
             messages=[
+                {"role": "system", "content": "You are a code review assistant. You MUST output valid JSON."},
                 {"role": "user", "content": prompt}
             ],
+            response_format={"type": "json_object"},
             max_tokens=2048,
-            temperature=0  # Set to 0 for deterministic, consistent results
+            temperature=0.2
         )
         response_text = message.choices[0].message.content.strip()
     except Exception as e:

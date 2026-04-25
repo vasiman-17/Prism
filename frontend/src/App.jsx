@@ -5,6 +5,8 @@ import Hero from './components/Hero'
 import ScanAnimation from './components/ScanAnimation'
 import Results from './components/Results'
 import Toast from './components/Toast'
+import Navbar from './components/Navbar'
+import Footer from './components/Footer'
 import gsap from 'gsap'
 import './App.css'
 
@@ -72,6 +74,9 @@ function App() {
         />
       )}
 
+      {/* Global Navbar */}
+      {internalState !== 'scanning' && <Navbar onHome={handleReset} />}
+
       {/* Layer 1: Main Content */}
       <div className="content">
         <div ref={pageRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -91,6 +96,9 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* Global Footer */}
+      {internalState !== 'scanning' && <Footer />}
 
       {/* Layer 99998+: Custom Cursor (renders last, highest z-index) */}
       <CustomCursor />
