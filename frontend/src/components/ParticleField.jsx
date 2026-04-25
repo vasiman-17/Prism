@@ -1,25 +1,26 @@
-import { useEffect, useRef, useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Points, PointMaterial } from '@react-three/drei'
 
 function ParticleSystem() {
   const pointsRef = useRef(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const [particleData, setParticleData] = useState(null)
 
-  // Generate particle data
-  const particleData = useMemo(() => {
-    const count = 2500
+  // Generate particle data on mount
+  useEffect(() => {
+    const count = 4000
     const positions = new Float32Array(count * 3)
     const basePositions = new Float32Array(count * 3)
     const phases = new Float32Array(count)
     const speeds = new Float32Array(count)
     const colors = new Float32Array(count * 3)
+    const sizes = new Float32Array(count)
 
     for (let i = 0; i < count; i++) {
-      // Random sphere distribution (radius 7)
+      // Random sphere distribution (radius 10)
       const theta = Math.random() * Math.PI * 2
       const phi = Math.random() * Math.PI
-      const radius = Math.random() * 7
+      const radius = Math.random() * 10
 
       const x = radius * Math.sin(phi) * Math.cos(theta)
       const y = radius * Math.sin(phi) * Math.sin(theta)
@@ -34,22 +35,31 @@ function ParticleSystem() {
       basePositions[i * 3 + 2] = z
 
       phases[i] = Math.random() * Math.PI * 2
-      speeds[i] = Math.random() * 0.6 + 0.2
+      speeds[i] = Math.random() * 2.0 + 0.8
+      sizes[i] = Math.random() * 0.03 + 0.01
 
-      // 90% white, 10% accent
-      const isAccent = Math.random() < 0.1
-      if (isAccent) {
+      // More varied colors - white, orange, cyan accents
+      const rand = Math.random()
+      if (rand < 0.15) {
+        // Orange accent
         colors[i * 3] = 1.0
         colors[i * 3 + 1] = 0.24
         colors[i * 3 + 2] = 0.0
+      } else if (rand < 0.3) {
+        // Cyan accent
+        colors[i * 3] = 0.31
+        colors[i * 3 + 1] = 0.81
+        colors[i * 3 + 2] = 0.89
       } else {
+        // White
         colors[i * 3] = 1.0
         colors[i * 3 + 1] = 1.0
         colors[i * 3 + 2] = 1.0
       }
     }
 
-    return { positions, basePositions, phases, speeds, colors, count }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setParticleData({ positions, basePositions, phases, speeds, colors, sizes, count })
   }, [])
 
   // Mouse tracking
@@ -64,7 +74,7 @@ function ParticleSystem() {
 
   // Animation loop
   useFrame(({ clock }) => {
-    if (!pointsRef.current) return
+    if (!pointsRef.current || !particleData || !pointsRef.current.geometry.attributes.position) return
 
     const time = clock.getElapsedTime()
     const positions = pointsRef.current.geometry.attributes.position.array
@@ -83,24 +93,39 @@ function ParticleSystem() {
       let y = baseY
       let z = baseZ
 
-      // Oscillation animation
-      y += Math.sin(time * speeds[i] + phases[i]) * 0.001
-      x += Math.cos(time * speeds[i] * 0.6 + phases[i]) * 0.0008
+      // Much stronger oscillation animation - all particles constantly moving
+      const speed = speeds[i] * 2
+      y += Math.sin(time * speed + phases[i]) * 0.08
+      x += Math.cos(time * speed * 0.7 + phases[i]) * 0.06
+      z += Math.sin(time * speed * 0.5 + phases[i]) * 0.04
 
-      // Mouse interaction: nudge toward mouse within distance 1.5
+      // Add rotation effect around center
+      const angle = time * 0.1 * speeds[i]
+      const rotatedX = x * Math.cos(angle) - z * Math.sin(angle)
+      const rotatedZ = x * Math.sin(angle) + z * Math.cos(angle)
+      x = rotatedX
+      z = rotatedZ
+
+      // Pulsing size effect through position
+      const pulse = Math.sin(time * 2 + phases[i]) * 0.02
+      x += pulse
+      y += pulse
+
+      // Mouse interaction: stronger attraction within distance 2.0
       const dx = mouseWorldX - x
       const dy = mouseWorldY - y
       const distance = Math.sqrt(dx * dx + dy * dy)
 
-      if (distance < 1.5) {
-        x += dx * 0.003
-        y += dy * 0.003
+      if (distance < 2.0) {
+        const force = (2.0 - distance) / 2.0
+        x += dx * force * 0.02
+        y += dy * force * 0.02
       }
 
-      // Spring back to base position
-      x += (baseX - x) * 0.0008
-      y += (baseY - y) * 0.0008
-      z += (baseZ - z) * 0.0008
+      // Gentle spring back to base position
+      x += (baseX - x) * 0.003
+      y += (baseY - y) * 0.003
+      z += (baseZ - z) * 0.003
 
       positions[i * 3] = x
       positions[i * 3 + 1] = y
@@ -110,8 +135,17 @@ function ParticleSystem() {
     pointsRef.current.geometry.attributes.position.needsUpdate = true
   })
 
+  if (!particleData) {
+    return (
+      <points ref={pointsRef}>
+        <bufferGeometry />
+        <pointsMaterial transparent opacity={0} />
+      </points>
+    )
+  }
+
   return (
-    <Points ref={pointsRef}>
+    <points ref={pointsRef}>
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
@@ -126,14 +160,15 @@ function ParticleSystem() {
           itemSize={3}
         />
       </bufferGeometry>
-      <PointMaterial
-        size={0.018}
-        opacity={0.5}
+      <pointsMaterial
+        size={0.025}
+        opacity={0.7}
         transparent
         vertexColors
         sizeAttenuation
+        blending={2}
       />
-    </Points>
+    </points>
   )
 }
 
@@ -152,7 +187,7 @@ export default function ParticleField() {
       camera={{ position: [0, 0, 6], fov: 75 }}
       gl={{ alpha: true }}
     >
-      <color attach="background" args={['#030303']} />
+      <color attach="background" args={['#050508']} />
       <ParticleSystem />
     </Canvas>
   )

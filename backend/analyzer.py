@@ -11,7 +11,7 @@ def generate_review(pr_data):
         raise Exception("GROQ_API_KEY not found in environment variables")
 
     try:
-        client = Groq()
+        client = Groq(api_key=api_key)
     except Exception as e:
         print(f"Error creating Groq client: {str(e)}")
         traceback.print_exc()
@@ -55,8 +55,8 @@ Respond with JSON only. No markdown. No explanation."""
             messages=[
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=1024,
-            temperature=0.5
+            max_tokens=2048,
+            temperature=0  # Set to 0 for deterministic, consistent results
         )
         response_text = message.choices[0].message.content.strip()
     except Exception as e:
@@ -83,10 +83,13 @@ Respond with JSON only. No markdown. No explanation."""
     risk_score = review.get("risk_score", 50)
     if risk_score < 30:
         verdict = "SHIP IT"
+        risk_reasoning = "This PR looks good to merge - minimal risk detected."
     elif risk_score <= 70:
         verdict = "REVIEW CAREFULLY"
+        risk_reasoning = "This PR requires careful review before merging - moderate changes detected."
     else:
         verdict = "DO NOT MERGE"
+        risk_reasoning = "This PR has high risk and should not be merged without significant changes."
 
     # Build final response
     return {
@@ -94,5 +97,6 @@ Respond with JSON only. No markdown. No explanation."""
         "risks": review.get("risks", []),
         "suggestions": review.get("suggestions", []),
         "risk_score": risk_score,
-        "verdict": verdict
+        "verdict": verdict,
+        "risk_reasoning": risk_reasoning
     }

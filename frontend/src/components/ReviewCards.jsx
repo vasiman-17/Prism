@@ -1,4 +1,4 @@
-export default function ReviewCards({ data }) {
+export default function ReviewCards() {
   return (
     <div className="review-cards">
       {/* Review cards content */}

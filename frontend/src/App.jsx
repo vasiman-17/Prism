@@ -1,83 +1,95 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import ParticleField from './components/ParticleField'
 import CustomCursor from './components/CustomCursor'
 import Hero from './components/Hero'
 import ScanAnimation from './components/ScanAnimation'
 import Results from './components/Results'
+import Toast from './components/Toast'
+import gsap from 'gsap'
 import './App.css'
 
 function App() {
-  const [state, setState] = useState('landing')
+  const [internalState, setInternalState] = useState('landing')
   const [prUrl, setPrUrl] = useState('')
   const [analysisData, setAnalysisData] = useState(null)
-  const [error, setError] = useState(null)
+  
+  const [toast, setToast] = useState(null) // { message, type }
+  const pageRef = useRef(null)
 
-  const apiPromiseRef = useRef(null)
+  // Incoming page animation
+  useEffect(() => {
+    if (pageRef.current) {
+      gsap.fromTo(pageRef.current, 
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }
+      )
+    }
+  }, [internalState])
 
   const handleAnalyze = (url) => {
     setPrUrl(url)
-    setState('scanning')
-
-    // Create the API promise and store it
-    const apiPromise = fetch('http://localhost:5000/api/analyze', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ pr_url: url }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        if (!data.success) {
-          setError(data.error || 'Failed to analyze PR')
-          setState('landing')
-          return null
-        }
-        return data
-      })
-      .catch(err => {
-        setError('Error connecting to backend. Make sure the server is running on http://localhost:5000')
-        setState('landing')
-        return null
-      })
-
-    apiPromiseRef.current = apiPromise
+    setInternalState('scanning')
   }
 
   const handleScanComplete = (data) => {
+    if (!data || !data.success) {
+      setToast({ message: data?.error || 'API failed to analyze PR.', type: 'error' })
+      setInternalState('landing')
+      return
+    }
+    
     setAnalysisData(data)
-    setState('results')
+    setToast({ message: 'Analysis complete', type: 'success' })
+    setInternalState('results')
   }
 
   const handleReset = () => {
-    setState('landing')
+    setInternalState('landing')
     setPrUrl('')
     setAnalysisData(null)
-    setError(null)
   }
+
+  const handleError = (msg) => {
+    setToast({ message: msg, type: 'error' })
+  }
+
+  // Stable callback for toast close to avoid re-render loops
+  const handleToastClose = useCallback(() => {
+    setToast(null)
+  }, [])
 
   return (
     <div className="app">
       {/* Layer 0: Background Particles */}
       <ParticleField />
 
+      {/* Toast Notification */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={handleToastClose} 
+        />
+      )}
+
       {/* Layer 1: Main Content */}
       <div className="content">
-        {state === 'landing' && (
-          <Hero onAnalyze={handleAnalyze} error={error} />
-        )}
+        <div ref={pageRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
+          {internalState === 'landing' && (
+            <Hero onAnalyze={handleAnalyze} onError={handleError} />
+          )}
 
-        {state === 'scanning' && (
-          <ScanAnimation
-            prUrl={prUrl}
-            apiCall={apiPromiseRef.current}
-            onComplete={handleScanComplete}
-          />
-        )}
+          {internalState === 'scanning' && (
+            <ScanAnimation
+              prUrl={prUrl}
+              onComplete={handleScanComplete}
+            />
+          )}
 
-        {state === 'results' && analysisData && (
-          <Results data={analysisData} onReset={handleReset} />
-        )}
+          {internalState === 'results' && (
+            <Results data={analysisData} onReset={handleReset} />
+          )}
+        </div>
       </div>
 
       {/* Layer 99998+: Custom Cursor (renders last, highest z-index) */}
@@ -87,4 +99,3 @@ function App() {
 }
 
 export default App
-

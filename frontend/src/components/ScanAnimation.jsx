@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import gsap from 'gsap'
 import './ScanAnimation.css'
 
@@ -32,7 +32,7 @@ const CODE_LINES = [
   "const riskScore = calculateRisk(diffStats);",
   "return score > 70 ? 'DANGER' : 'SAFE';",
   "async function parsePRDiff(url) {",
-  "  const match = url.match(/pull\\/(\d+)/);",
+  "  const match = url.match(/pull\\/(\\d+)/);",
   "  const prNumber = match[1];",
   "  return await github.pulls.get({ prNumber });",
   "Object.keys(files).forEach(file => {",
@@ -40,12 +40,12 @@ const CODE_LINES = [
   "  if (additions > 500) flagComplexity();",
 ]
 
-export default function ScanAnimation({ prUrl, apiCall, onComplete }) {
-  const [phase, setPhase] = useState('init')
+export default function ScanAnimation({ prUrl, onComplete }) {
   const [progress, setProgress] = useState(0)
   const [apiDone, setApiDone] = useState(false)
   const [apiData, setApiData] = useState(null)
   const [statusText, setStatusText] = useState('FETCHING PR DATA...')
+  const [particles, setParticles] = useState([])
 
   const canvasRef = useRef(null)
   const startTimeRef = useRef(Date.now())
@@ -53,9 +53,16 @@ export default function ScanAnimation({ prUrl, apiCall, onComplete }) {
   const scannerRef = useRef(null)
   const statusRef = useRef(null)
   const wrapperRef = useRef(null)
+  // Ref to hold the latest apiData so the completion callback always sees it
+  const apiDataRef = useRef(null)
 
   const ESTIMATED_SECONDS = 7
   const MINIMUM_TIME = 3000 // 3 seconds
+
+  // Keep apiDataRef in sync with apiData state
+  useEffect(() => {
+    apiDataRef.current = apiData
+  }, [apiData])
 
   // Initialize code rain streams
   const initializeStreams = () => {
@@ -72,103 +79,40 @@ export default function ScanAnimation({ prUrl, apiCall, onComplete }) {
     streamsRef.current = streams
   }
 
-  // Setup and listen to API call
+  // Initialize floating particles
   useEffect(() => {
-    setPhase('scanning')
-    initializeStreams()
-
-    if (apiCall) {
-      // Listen to API promise
-      apiCall
-        .then((data) => {
-          if (data) {
-            setApiData(data)
-            setApiDone(true)
-          }
-        })
-        .catch((err) => {
-          console.error('API error:', err)
-          setApiDone(true) // Still mark as done to allow completion
-        })
-    } else {
-      console.error('apiCall is null')
-    }
-  }, [apiCall])
-
-  // Update status text based on elapsed time
-  useEffect(() => {
-    const statusTimer = setInterval(() => {
-      const elapsed = (Date.now() - startTimeRef.current) / 1000
-
-      if (elapsed < 1) setStatusText('FETCHING PR DATA...')
-      else if (elapsed < 3) setStatusText('READING DIFF...')
-      else if (elapsed < 5) setStatusText('AI ANALYSIS IN PROGRESS...')
-      else setStatusText('GENERATING REVIEW...')
-    }, 500)
-
-    return () => clearInterval(statusTimer)
-  }, [])
-
-  // Canvas code rain animation
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext('2d')
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-
-    const animate = () => {
-      // Clear canvas with slight fade
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-      // Draw each stream
-      streamsRef.current.forEach((stream) => {
-        ctx.font = '11px Courier New'
-        ctx.fillStyle = `rgba(255, 61, 0, ${stream.opacity})`
-        ctx.fillText(CODE_LINES[stream.lineIndex], stream.x, stream.y)
-
-        // Move stream down
-        stream.y += stream.speed
-
-        // Reset if off screen
-        if (stream.y > canvas.height + 20) {
-          stream.y = -50
-          stream.lineIndex = (stream.lineIndex + 1) % CODE_LINES.length
-          stream.x += (Math.random() - 0.5) * 100
-        }
+    const particleCount = 15
+    const newParticles = []
+    for (let i = 0; i < particleCount; i++) {
+      newParticles.push({
+        id: i,
+        left: Math.random() * 100,
+        animationDelay: Math.random() * 5,
+        animationDuration: 4 + Math.random() * 4
       })
-
-      requestAnimationFrame(animate)
     }
-
-    const rafId = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(rafId)
+    setParticles(newParticles)
   }, [])
 
-  // Progress and completion logic
+  // Initialize data streams
+  const [dataStreams, setDataStreams] = useState([])
   useEffect(() => {
-    const progressInterval = setInterval(() => {
-      const elapsed = Date.now() - startTimeRef.current
-      const rawProgress = (elapsed / 1000 / ESTIMATED_SECONDS) * 100
+    const streamCount = 8
+    const streams = []
+    for (let i = 0; i < streamCount; i++) {
+      streams.push({
+        id: i,
+        left: (i / streamCount) * 100,
+        animationDelay: Math.random() * 2,
+        animationDuration: 1.5 + Math.random() * 1.5
+      })
+    }
+    setDataStreams(streams)
+  }, [])
 
-      // Cap at 94% until API responds
-      let newProgress = Math.min(rawProgress, 94)
-      setProgress(Math.floor(newProgress))
-
-      // Check if we should complete
-      if (apiDone && newProgress >= 94 && elapsed >= MINIMUM_TIME) {
-        clearInterval(progressInterval)
-        handleCompletion()
-      }
-    }, 50)
-
-    return () => clearInterval(progressInterval)
-  }, [apiDone])
-
-  const handleCompletion = () => {
-    setPhase('completing')
+  // Memoized completion handler that reads from ref to avoid stale closure
+  const handleCompletion = useCallback(() => {
+    const currentData = apiDataRef.current
 
     // 1. Scale center elements to 0
     if (scannerRef.current) {
@@ -198,6 +142,12 @@ export default function ScanAnimation({ prUrl, apiCall, onComplete }) {
         gsap.to(flashDiv, {
           opacity: 0,
           duration: 0.08,
+          onComplete: () => {
+            // Clean up the flash div from the DOM
+            if (flashDiv.parentNode) {
+              flashDiv.parentNode.removeChild(flashDiv)
+            }
+          },
         })
       },
     })
@@ -213,45 +163,205 @@ export default function ScanAnimation({ prUrl, apiCall, onComplete }) {
     // 4. Call onComplete after delay
     setTimeout(() => {
       setProgress(100)
-      onComplete(apiData)
+      onComplete(currentData)
     }, 500)
-  }
+  }, [onComplete])
+
+  // Setup and fetch PR data
+  useEffect(() => {
+    initializeStreams()
+
+    // Fetch PR data from API
+    const fetchPRData = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+        
+        const response = await fetch(`${apiUrl}/api/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ pr_url: prUrl }),
+        })
+        
+        const data = await response.json()
+        
+        if (data.success) {
+          setApiData(data)
+        } else {
+          setApiData({ success: false, error: data.error })
+        }
+      } catch (error) {
+        console.error('API error:', error)
+        setApiData({ success: false, error: error.message })
+      } finally {
+        setApiDone(true)
+      }
+    }
+
+    fetchPRData()
+  }, [prUrl])
+
+  // Update status text based on elapsed time
+  useEffect(() => {
+    const statusTimer = setInterval(() => {
+      const elapsed = (Date.now() - startTimeRef.current) / 1000
+
+      if (elapsed < 1) setStatusText('FETCHING PR DATA...')
+      else if (elapsed < 3) setStatusText('READING DIFF...')
+      else if (elapsed < 5) setStatusText('AI ANALYSIS IN PROGRESS...')
+      else setStatusText('GENERATING REVIEW...')
+    }, 500)
+
+    return () => clearInterval(statusTimer)
+  }, [])
+
+  // Canvas code rain animation
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+
+    let rafId;
+
+    const animate = () => {
+      // Clear canvas with slight fade
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      // Draw each stream
+      streamsRef.current.forEach((stream) => {
+        ctx.font = '11px Courier New'
+        ctx.fillStyle = `rgba(255, 61, 0, ${stream.opacity})`
+        ctx.fillText(CODE_LINES[stream.lineIndex], stream.x, stream.y)
+
+        // Move stream down
+        stream.y += stream.speed
+
+        // Reset if off screen
+        if (stream.y > canvas.height + 20) {
+          stream.y = -50
+          stream.lineIndex = (stream.lineIndex + 1) % CODE_LINES.length
+          stream.x += (Math.random() - 0.5) * 100
+        }
+      })
+
+      rafId = requestAnimationFrame(animate)
+    }
+
+    rafId = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(rafId)
+  }, [])
+
+  // Progress and completion logic
+  useEffect(() => {
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTimeRef.current
+      const rawProgress = (elapsed / 1000 / ESTIMATED_SECONDS) * 100
+
+      // Cap at 94% until API responds
+      let newProgress = Math.min(rawProgress, 94)
+      setProgress(Math.floor(newProgress))
+
+      // Check if we should complete
+      if (apiDone && newProgress >= 94 && elapsed >= MINIMUM_TIME) {
+        clearInterval(progressInterval)
+        handleCompletion()
+      }
+    }, 50)
+
+    return () => clearInterval(progressInterval)
+  }, [apiDone, handleCompletion])
 
   return (
     <div ref={wrapperRef} className="scan-animation-wrapper">
-      {/* Layer 1: Black background */}
+      {/* Layer 1: Animated background */}
       <div className="scan-bg"></div>
+      
+      {/* Layer 2: Grid overlay */}
+      <div className="grid-overlay"></div>
+      
+      {/* Layer 3: Hexagon pattern */}
+      <div className="hexagon-pattern"></div>
+      
+      {/* Layer 4: Scan line */}
+      <div className="scan-line"></div>
 
-      {/* Layer 2: Code rain canvas */}
+      {/* Layer 5: Code rain canvas */}
       <canvas
         ref={canvasRef}
         className="code-rain-canvas"
       ></canvas>
+      
+      {/* Layer 6: Floating particles */}
+      <div className="particles-container">
+        {particles.map((particle) => (
+          <div
+            key={particle.id}
+            className="floating-particle"
+            style={{
+              left: `${particle.left}%`,
+              bottom: '0',
+              animationDelay: `${particle.animationDelay}s`,
+              animationDuration: `${particle.animationDuration}s`
+            }}
+          />
+        ))}
+      </div>
+      
+      {/* Layer 7: Data streams */}
+      {dataStreams.map((stream) => (
+        <div
+          key={stream.id}
+          className="data-stream"
+          style={{
+            left: `${stream.left}%`,
+            animationDelay: `${stream.animationDelay}s`,
+            animationDuration: `${stream.animationDuration}s`
+          }}
+        />
+      ))}
 
-      {/* Layer 3: Center scanner */}
+      {/* Layer 8: Center scanner */}
       <div ref={scannerRef} className="scanner-center">
-        <svg className="scanner-rings" viewBox="0 0 200 200">
+        <svg className="scanner-rings" viewBox="0 0 300 300">
           {/* Outer ring */}
           <circle
-            cx="100"
-            cy="100"
-            r="90"
+            cx="150"
+            cy="150"
+            r="140"
             stroke="#ff3d00"
-            strokeWidth="1.5"
+            strokeWidth="2"
             fill="none"
             opacity="0.8"
             className="ring-outer"
           />
+          {/* Middle ring */}
+          <circle
+            cx="150"
+            cy="150"
+            r="110"
+            stroke="rgba(255, 255, 255, 0.4)"
+            strokeWidth="1.5"
+            fill="none"
+            strokeDasharray="30 10"
+            className="ring-inner"
+          />
           {/* Inner ring */}
           <circle
-            cx="100"
-            cy="100"
-            r="70"
-            stroke="rgba(255, 255, 255, 0.2)"
+            cx="150"
+            cy="150"
+            r="80"
+            stroke="#ff3d00"
             strokeWidth="1"
             fill="none"
-            strokeDasharray="20 8"
-            className="ring-inner"
+            opacity="0.5"
+            strokeDasharray="15 15"
+            className="ring-outer"
+            style={{ animationDelay: '0.5s' }}
           />
         </svg>
 
@@ -261,12 +371,12 @@ export default function ScanAnimation({ prUrl, apiCall, onComplete }) {
         </div>
 
         <div className="pr-info">
-          {prUrl.substring(0, 40)}
-          {prUrl.length > 40 ? '...' : ''}
+          {prUrl.substring(0, 50)}
+          {prUrl.length > 50 ? '...' : ''}
         </div>
       </div>
 
-      {/* Layer 4: Status text */}
+      {/* Layer 9: Status text */}
       <div ref={statusRef} className="status-text">
         {statusText}
       </div>

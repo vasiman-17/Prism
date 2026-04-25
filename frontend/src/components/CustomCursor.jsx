@@ -2,26 +2,30 @@ import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 
 export default function CustomCursor() {
-  const dotRef = useRef(null)
-  const ringRef = useRef(null)
+  const cursorRef = useRef(null)
+  const triangleRef = useRef(null)
+  const lineRef = useRef(null)
   const mouseRef = useRef({ x: -999, y: -999 })
-  const ringPosRef = useRef({ x: -999, y: -999 })
-  const [ripples, setRipples] = useState([])
+  const cursorPosRef = useRef({ x: -999, y: -999 })
   const [isMoving, setIsMoving] = useState(false)
+  const [rotation, setRotation] = useState(0)
 
   // Mouse tracking
   useEffect(() => {
     const handleMouseMove = (e) => {
+      const prevX = mouseRef.current.x
+      const prevY = mouseRef.current.y
+      
       mouseRef.current.x = e.clientX
       mouseRef.current.y = e.clientY
       setIsMoving(true)
 
-      // Dot follows exactly
-      if (dotRef.current) {
-        gsap.set(dotRef.current, {
-          left: e.clientX,
-          top: e.clientY,
-        })
+      // Calculate rotation based on movement direction
+      if (prevX !== -999) {
+        const deltaX = e.clientX - prevX
+        const deltaY = e.clientY - prevY
+        const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI)
+        setRotation(angle)
       }
     }
 
@@ -29,18 +33,19 @@ export default function CustomCursor() {
     return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
-  // Ring follows with lerp in requestAnimationFrame
+  // Cursor follows with lerp in requestAnimationFrame
   useEffect(() => {
     let rafId
     const animate = () => {
       if (isMoving) {
-        ringPosRef.current.x += (mouseRef.current.x - ringPosRef.current.x) * 0.1
-        ringPosRef.current.y += (mouseRef.current.y - ringPosRef.current.y) * 0.1
+        cursorPosRef.current.x += (mouseRef.current.x - cursorPosRef.current.x) * 0.15
+        cursorPosRef.current.y += (mouseRef.current.y - cursorPosRef.current.y) * 0.15
 
-        if (ringRef.current) {
-          gsap.set(ringRef.current, {
-            left: ringPosRef.current.x,
-            top: ringPosRef.current.y,
+        if (cursorRef.current) {
+          gsap.set(cursorRef.current, {
+            left: cursorPosRef.current.x,
+            top: cursorPosRef.current.y,
+            rotation: rotation,
           })
         }
       }
@@ -50,7 +55,7 @@ export default function CustomCursor() {
 
     rafId = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(rafId)
-  }, [isMoving])
+  }, [isMoving, rotation])
 
   // Hover states for interactive elements
   useEffect(() => {
@@ -62,18 +67,19 @@ export default function CustomCursor() {
         e.target.dataset.cursor === 'pointer'
 
       if (isInteractive) {
-        if (dotRef.current) {
-          gsap.to(dotRef.current, {
-            scale: 0,
-            duration: 0.3,
+        if (cursorRef.current) {
+          gsap.to(cursorRef.current, {
+            scale: 1.5,
+            borderColor: '#ff3d00',
+            backgroundColor: 'rgba(255, 61, 0, 0.1)',
+            duration: 0.2,
           })
         }
-        if (ringRef.current) {
-          gsap.to(ringRef.current, {
-            scale: 2.2,
-            borderColor: 'rgba(255, 61, 0, 1)',
-            backgroundColor: 'rgba(255, 61, 0, 0.1)',
-            duration: 0.3,
+        if (triangleRef.current) {
+          gsap.to(triangleRef.current, {
+            scale: 1.3,
+            fill: '#ff3d00',
+            duration: 0.2,
           })
         }
       }
@@ -87,18 +93,19 @@ export default function CustomCursor() {
         e.target.dataset.cursor === 'pointer'
 
       if (isInteractive) {
-        if (dotRef.current) {
-          gsap.to(dotRef.current, {
+        if (cursorRef.current) {
+          gsap.to(cursorRef.current, {
             scale: 1,
-            duration: 0.3,
+            borderColor: '#f0ede5',
+            backgroundColor: 'transparent',
+            duration: 0.2,
           })
         }
-        if (ringRef.current) {
-          gsap.to(ringRef.current, {
+        if (triangleRef.current) {
+          gsap.to(triangleRef.current, {
             scale: 1,
-            borderColor: 'rgba(255, 61, 0, 0.6)',
-            backgroundColor: 'transparent',
-            duration: 0.3,
+            fill: '#f0ede5',
+            duration: 0.2,
           })
         }
       }
@@ -113,96 +120,87 @@ export default function CustomCursor() {
     }
   }, [])
 
-  // Click ripple effect
-  useEffect(() => {
-    const handleMouseDown = (e) => {
-      const rippleId = Date.now()
-      const ripple = {
-        id: rippleId,
-        x: e.clientX,
-        y: e.clientY,
-      }
-
-      setRipples((prev) => [...prev, ripple])
-
-      // Animate ripple
-      setTimeout(() => {
-        const rippleEl = document.getElementById(`ripple-${rippleId}`)
-        if (rippleEl) {
-          gsap.fromTo(
-            rippleEl,
-            { scale: 0, opacity: 0.6 },
-            {
-              scale: 4,
-              opacity: 0,
-              duration: 0.6,
-              ease: 'power2.out',
-              onComplete: () => {
-                setRipples((prev) => prev.filter((r) => r.id !== rippleId))
-              },
-            }
-          )
-        }
-      }, 0)
-    }
-
-    window.addEventListener('mousedown', handleMouseDown)
-    return () => window.removeEventListener('mousedown', handleMouseDown)
-  }, [])
-
   return (
     <>
-      {/* Cursor Dot */}
+      {/* Custom Crosshair Cursor */}
       <div
-        ref={dotRef}
+        ref={cursorRef}
         style={{
           position: 'fixed',
-          width: '8px',
-          height: '8px',
-          backgroundColor: '#ff3d00',
+          width: '40px',
+          height: '40px',
           pointerEvents: 'none',
           zIndex: 99999,
           transform: 'translate(-50%, -50%)',
-          scale: 1,
           display: isMoving ? 'block' : 'none',
         }}
-      />
-
-      {/* Cursor Ring */}
-      <div
-        ref={ringRef}
-        style={{
-          position: 'fixed',
-          width: '32px',
-          height: '32px',
-          border: '1.5px solid rgba(255, 61, 0, 0.6)',
-          backgroundColor: 'transparent',
-          pointerEvents: 'none',
-          zIndex: 99998,
-          transform: 'translate(-50%, -50%)',
-          scale: 1,
-          display: isMoving ? 'block' : 'none',
-        }}
-      />
-
-      {/* Click Ripples */}
-      {ripples.map((ripple) => (
-        <div
-          key={ripple.id}
-          id={`ripple-${ripple.id}`}
+      >
+        <svg
+          width="40"
+          height="40"
+          viewBox="0 0 40 40"
+          fill="none"
           style={{
-            position: 'fixed',
-            left: ripple.x,
-            top: ripple.y,
-            width: '1px',
-            height: '1px',
-            border: '1px solid rgba(255, 61, 0, 0.8)',
-            pointerEvents: 'none',
-            zIndex: 99997,
-            transform: 'translate(-50%, -50%)',
+            width: '100%',
+            height: '100%',
           }}
-        />
-      ))}
+        >
+          {/* Outer ring */}
+          <circle
+            cx="20"
+            cy="20"
+            r="18"
+            stroke="#f0ede5"
+            strokeWidth="1"
+            fill="none"
+            opacity="0.8"
+          />
+          {/* Cross lines */}
+          <line
+            x1="20"
+            y1="5"
+            x2="20"
+            y2="15"
+            stroke="#ff3d00"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <line
+            x1="20"
+            y1="25"
+            x2="20"
+            y2="35"
+            stroke="#ff3d00"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <line
+            x1="5"
+            y1="20"
+            x2="15"
+            y2="20"
+            stroke="#ff3d00"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <line
+            x1="25"
+            y1="20"
+            x2="35"
+            y2="20"
+            stroke="#ff3d00"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          {/* Center triangle */}
+          <polygon
+            ref={triangleRef}
+            points="20,12 24,20 16,20"
+            fill="#f0ede5"
+            style={{ transformOrigin: 'center' }}
+          />
+        </svg>
+      </div>
     </>
   )
 }

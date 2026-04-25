@@ -12,7 +12,7 @@ GITHUB_HEADERS = {
 def parse_pr_url(pr_url):
     """Extract owner, repo, and pull number from GitHub PR URL."""
     # Handle both https://github.com/owner/repo/pull/123 and variations
-    match = re.search(r'github\.com/([^/]+)/([^/]+)/pull/(\d+)', pr_url)
+    match = re.search(r'(?:https?://)?(?:www\.)?github\.com/([^/]+)/([^/]+)/pull/(\d+)', pr_url)
     if not match:
         raise ValueError(f"Invalid GitHub PR URL: {pr_url}")
 
@@ -35,16 +35,7 @@ def get_pr_data(pr_url):
         # Fetch PR metadata
         pr_response = requests.get(pr_url_api, headers=GITHUB_HEADERS, timeout=10)
 
-        # DEBUG LOGGING
-        print(f"\n=== DEBUG: PR Metadata Request ===")
-        print(f"URL: {pr_url_api}")
-        print(f"Status Code: {pr_response.status_code}")
-        print(f"Response (first 500 chars): {pr_response.text[:500]}")
-        print(f"===================================\n")
-
         if pr_response.status_code != 200:
-            print(f"GitHub API Error - PR Metadata: Status {pr_response.status_code}")
-            print(f"Response: {pr_response.text}")
             if pr_response.status_code == 404:
                 raise Exception("Pull request not found. Make sure the URL is correct and the repo is public.")
             raise Exception(f"GitHub API returned status {pr_response.status_code}")
@@ -53,13 +44,10 @@ def get_pr_data(pr_url):
         # Fetch PR files and diffs
         files_response = requests.get(files_url_api, headers=GITHUB_HEADERS, timeout=10)
         if files_response.status_code != 200:
-            print(f"GitHub API Error - PR Files: Status {files_response.status_code}")
-            print(f"Response: {files_response.text}")
             raise Exception(f"GitHub API returned status {files_response.status_code}")
         files = files_response.json()
 
     except requests.exceptions.RequestException as e:
-        print(f"Request Exception: {str(e)}")
         raise Exception(f"Could not fetch PR. Make sure it is a public repository. Error: {str(e)}")
 
     # Extract diff text from all files
@@ -84,5 +72,6 @@ def get_pr_data(pr_url):
         "deletions": pr.get("deletions", 0),
         "body": pr.get("body", "") or "",
         "diff_text": diff_text,
-        "file_names": file_names
+        "file_names": file_names,
+        "pr_url": pr.get("html_url", pr_url)
     }

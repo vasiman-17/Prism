@@ -155,3 +155,29 @@ input:focus, textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 12px rgba(255, 61, 0, 0.4);
 }
+
+/* User Mobile Overrides */
+@media (max-width: 768px) {
+  .title-line {
+    font-size: clamp(48px, 13vw, 90px) !important;
+  }
+  .input-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .hero-input {
+    border-right: 1px solid var(--border) !important;
+  }
+  .hero-button {
+    width: 100% !important;
+  }
+  .results-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .stats-header {
+    display: none !important;
+  }
+  .risk-score-counter {
+    font-size: 64px !important;
+  }
+}

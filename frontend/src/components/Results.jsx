@@ -1,203 +1,273 @@
-import { useRef, useEffect, useState } from 'react'
-import gsap from 'gsap'
-import RiskMeter from './RiskMeter'
-import './Results.css'
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+import './Results.css';
 
-const ReviewCard = ({ title, accent, children, index }) => {
-  const cardRef = useRef(null)
-  const [isHovered, setIsHovered] = useState(false)
+const Results = ({ data, onReset }) => {
 
-  const handleMouseMove = (e) => {
-    if (!cardRef.current) return
+  // Refs for GSAP animations
+  const containerRef = useRef(null);
+  const headerRef = useRef(null);
+  const scoreRef = useRef(null);
+  const verdictRef = useRef(null);
+  const metaRef = useRef(null);
+  const summaryRef = useRef(null);
+  const fileAnalysisRef = useRef(null);
+  const risksRef = useRef(null);
+  const suggestionsRef = useRef(null);
+  const metricsRef = useRef(null);
+  const buttonRef = useRef(null);
 
-    const rect = cardRef.current.getBoundingClientRect()
-    const centerX = rect.width / 2
-    const centerY = rect.height / 2
+  // Safe checks for data structure
+  const riskScore = data?.risk_score || 0;
+  const verdict = data?.verdict || 'PENDING';
+  const additions = data?.additions || 0;
+  const deletions = data?.deletions || 0;
+  const filesChanged = data?.files_changed || 0;
+  const title = data?.title || 'Pull Request';
+  const author = data?.pr_author || 'Unknown';
+  const prUrl = data?.pr_url || '#';
 
-    const mouseX = e.clientX - rect.left
-    const mouseY = e.clientY - rect.top
+  // Determine risk color
+  const getRiskColor = (score) => {
+    if (score >= 70) return '#ff3d00';
+    if (score >= 30) return '#f5c542';
+    return '#3ecf8e';
+  };
 
-    const dx = (mouseX - centerX) / centerX
-    const dy = (mouseY - centerY) / centerY
+  const riskColor = getRiskColor(riskScore);
 
-    gsap.to(cardRef.current, {
-      rotationX: -dy * 6,
-      rotationY: dx * 6,
-      duration: 0.2,
-      ease: 'power2.out',
-    })
-  }
+  // GSAP animations on mount
+  useEffect(() => {
+    if (!data) return;
+    
+    let ctx = gsap.context(() => {
+      const tl = gsap.timeline();
 
-  const handleMouseLeave = () => {
-    gsap.to(cardRef.current, {
-      rotationX: 0,
-      rotationY: 0,
-      duration: 0.2,
-      ease: 'power2.out',
-    })
+      tl.from(headerRef.current, { y: 40, opacity: 0, duration: 0.8, ease: 'power4.out' })
+        .from(scoreRef.current, { scale: 0.5, opacity: 0, duration: 0.6, ease: 'back.out(1.7)' }, '-=0.4')
+        .from(verdictRef.current, { y: 20, opacity: 0, duration: 0.6 }, '-=0.3')
+        .from(metaRef.current, { y: 20, opacity: 0, duration: 0.5 }, '-=0.3')
+        .from(summaryRef.current, { y: 30, opacity: 0, duration: 0.7 }, '-=0.3')
+        .from(fileAnalysisRef.current, { y: 30, opacity: 0, duration: 0.7 }, '-=0.4')
+        .from(risksRef.current, { y: 30, opacity: 0, duration: 0.7 }, '-=0.4')
+        .from(suggestionsRef.current, { y: 30, opacity: 0, duration: 0.7 }, '-=0.4')
+        .from(metricsRef.current, { y: 30, opacity: 0, duration: 0.7 }, '-=0.4')
+        .from(buttonRef.current, { y: 20, opacity: 0, duration: 0.6 }, '-=0.3');
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, [data]);
+
+  if (!data) {
+    return (
+      <div className="results-container">
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '100vh',
+          color: '#888',
+          fontFamily: "'Space Grotesk', sans-serif"
+        }}>
+          <div style={{ fontSize: '24px', marginBottom: '16px' }}>No data available</div>
+          <button 
+            onClick={onReset}
+            style={{
+              padding: '12px 24px',
+              background: 'linear-gradient(135deg, #ff3d00 0%, #ff5722 100%)',
+              color: '#000',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: '16px',
+              letterSpacing: '2px'
+            }}
+          >
+            ANALYZE ANOTHER PR
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div
-      ref={cardRef}
-      className="review-card"
-      style={{ borderLeftColor: accent }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-    >
-      <h3 className="card-title" style={{ borderLeftColor: accent }}>
-        {title}
-      </h3>
-      {children}
-    </div>
-  )
-}
-
-export default function Results({ data, onReset }) {
-  const cardsRef = useRef(null)
-  const summaryTextRef = useRef(null)
-  const risksRef = useRef(null)
-  const suggestionsRef = useRef(null)
-
-  // Animate summary text word by word
-  useEffect(() => {
-    if (!summaryTextRef.current) return
-
-    const words = data.plain_summary.split(' ')
-    summaryTextRef.current.innerHTML = words
-      .map((word) => `<span class="summary-word">${word}</span>`)
-      .join(' ')
-
-    const wordElements = summaryTextRef.current.querySelectorAll('.summary-word')
-    gsap.from(wordElements, {
-      opacity: 0,
-      y: 8,
-      stagger: 0.03,
-      duration: 0.5,
-      delay: 2.7,
-      ease: 'power2.out',
-    })
-  }, [data.plain_summary])
-
-  // Animate risk items
-  useEffect(() => {
-    if (!risksRef.current) return
-    const riskItems = risksRef.current.querySelectorAll('.risk-item')
-    gsap.from(riskItems, {
-      opacity: 0,
-      y: 10,
-      stagger: 0.1,
-      duration: 0.6,
-      delay: 3.0,
-      ease: 'power2.out',
-    })
-  }, [data.risks])
-
-  // Animate suggestion items
-  useEffect(() => {
-    if (!suggestionsRef.current) return
-    const suggestionItems = suggestionsRef.current.querySelectorAll('.suggestion-item')
-    gsap.from(suggestionItems, {
-      opacity: 0,
-      y: 10,
-      stagger: 0.1,
-      duration: 0.6,
-      delay: 3.0,
-      ease: 'power2.out',
-    })
-  }, [data.suggestions])
-
-  // Animate cards
-  useEffect(() => {
-    if (!cardsRef.current) return
-    const cards = cardsRef.current.querySelectorAll('.review-card')
-    gsap.from(cards, {
-      y: 50,
-      opacity: 0,
-      stagger: 0.12,
-      duration: 0.8,
-      ease: 'power3.out',
-      delay: 2.5,
-    })
-  }, [])
-
-  const scoreColor =
-    data.risk_score < 30 ? '#3ecf8e' : data.risk_score < 70 ? '#f5c542' : '#ff3d00'
-
-  return (
-    <div className="results-page">
-      {/* Section 1: PR Header */}
-      <div className="results-header">
-        <div className="header-left">
-          <div className="header-label">PRISM ANALYSIS</div>
-          <h1 className="header-title">{data.pr_title}</h1>
-          <a href={data.pr_url} target="_blank" rel="noopener noreferrer" className="header-url">
-            {data.pr_url}
-          </a>
-        </div>
-
-        <div className="header-stats">
-          <div className="stat-chip">{data.files_changed} FILES</div>
-          <div className="stat-chip additions">+{data.additions}</div>
-          <div className="stat-chip deletions">-{data.deletions}</div>
-        </div>
+    <div className="results-container" ref={containerRef}>
+      {/* Header Section */}
+      <div className="results-header" ref={headerRef}>
+        <div className="results-title">{title}</div>
+        <a href={prUrl} target="_blank" rel="noopener noreferrer" className="pr-url">
+          {prUrl}
+        </a>
       </div>
 
-      {/* Section 2: Risk Meter */}
-      <RiskMeter score={data.risk_score} verdict={data.verdict} />
+      {/* Main Content Grid */}
+      <div className="results-grid">
+        {/* Left Column - Score & Meta */}
+        <div className="left-column">
+          {/* Score Section */}
+          <div className="score-section">
+            <div className="score-display" ref={scoreRef} style={{ color: riskColor }}>
+              {riskScore}
+            </div>
+            <div className="score-label">RISK SCORE</div>
+            <div className="verdict-display" ref={verdictRef} style={{ 
+              borderColor: riskColor, 
+              color: riskColor 
+            }}>
+              {verdict}
+            </div>
+          </div>
 
-      {/* Section 3: Review Cards */}
-      <div className="cards-container" ref={cardsRef}>
-        {/* Card 1: Summary */}
-        <ReviewCard title="WHAT THIS PR DOES" accent="#4ecdc4" index={0}>
-          <div ref={summaryTextRef} className="card-content summary-content"></div>
-        </ReviewCard>
+          {/* Metadata Section */}
+          <div className="meta-section" ref={metaRef}>
+            <div className="meta-row">
+              <span className="meta-label">AUTHOR</span>
+              <span className="meta-value">{author}</span>
+            </div>
+            <div className="meta-row">
+              <span className="meta-label">FILES CHANGED</span>
+              <span className="meta-value">{filesChanged}</span>
+            </div>
+            <div className="meta-row">
+              <span className="meta-label">ADDITIONS</span>
+              <span className="meta-value" style={{ color: '#3ecf8e' }}>+{additions}</span>
+            </div>
+            <div className="meta-row">
+              <span className="meta-label">DELETIONS</span>
+              <span className="meta-value" style={{ color: '#ff3d00' }}>-{deletions}</span>
+            </div>
+            <div className="meta-row">
+              <span className="meta-label">TOTAL CHANGES</span>
+              <span className="meta-value">{additions + deletions}</span>
+            </div>
+          </div>
+        </div>
 
-        {/* Card 2: Risks */}
-        <ReviewCard title="POTENTIAL RISKS" accent="#ff3d00" index={1}>
-          <div ref={risksRef} className="card-content risks-content">
-            {data.risks.map((risk, idx) => (
-              <div key={idx} className="risk-item">
-                <span className="risk-icon">▸</span>
-                <span className="risk-text">{risk}</span>
+        {/* Right Column - Content */}
+        <div className="right-column">
+          {/* Summary */}
+          <div className="content-section" ref={summaryRef}>
+            <div className="section-title">OVERVIEW</div>
+            <div className="section-text">
+              {data?.plain_summary || 'No summary available for this pull request.'}
+            </div>
+          </div>
+
+          {/* File Analysis */}
+          <div className="content-section" ref={fileAnalysisRef}>
+            <div className="section-title">
+              FILE ANALYSIS
+              <span className="section-count">{filesChanged}</span>
+            </div>
+            <div className="file-analysis-grid">
+              <div className="file-stat-box">
+                <div className="file-stat-value">{filesChanged}</div>
+                <div className="file-stat-label">Files Modified</div>
               </div>
-            ))}
-          </div>
-        </ReviewCard>
-
-        {/* Card 3: Suggestions */}
-        <ReviewCard title="ENGINEER WOULD CHANGE" accent="#3ecf8e" index={2}>
-          <div ref={suggestionsRef} className="card-content suggestions-content">
-            {data.suggestions.map((sug, idx) => (
-              <div key={idx} className="suggestion-item">
-                <div className="suggestion-title">{sug.title}</div>
-                <div className="suggestion-detail">{sug.detail}</div>
-                {sug.code && (
-                  <pre className="suggestion-code">
-                    <code>{sug.code}</code>
-                  </pre>
-                )}
+              <div className="file-stat-box">
+                <div className="file-stat-value" style={{ color: '#3ecf8e' }}>+{additions}</div>
+                <div className="file-stat-label">Lines Added</div>
               </div>
-            ))}
+              <div className="file-stat-box">
+                <div className="file-stat-value" style={{ color: '#ff3d00' }}>-{deletions}</div>
+                <div className="file-stat-label">Lines Deleted</div>
+              </div>
+              <div className="file-stat-box">
+                <div className="file-stat-value">{((additions + deletions) / Math.max(filesChanged, 1)).toFixed(0)}</div>
+                <div className="file-stat-label">Avg/File</div>
+              </div>
+            </div>
           </div>
-        </ReviewCard>
 
-        {/* Card 4: Verdict */}
-        <div className="review-card verdict-card" style={{ gridColumn: '1 / -1' }}>
-          <div className="verdict-large" style={{ color: scoreColor }}>
-            {data.verdict}
+          {/* Risks */}
+          <div className="content-section" ref={risksRef}>
+            <div className="section-title">
+              POTENTIAL RISKS
+              <span className="section-count">{(data?.risks || []).length}</span>
+            </div>
+            <div className="section-text">
+              {(data?.risks || []).length > 0 ? (
+                data.risks.map((risk, idx) => (
+                  <div key={idx} className="risk-item">
+                    <span className="risk-bullet">▸</span>
+                    <span>{risk}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="empty-state">No significant risks detected</div>
+              )}
+            </div>
           </div>
-          <div className="verdict-reasoning">{data.risk_reasoning || 'Analysis complete.'}</div>
+
+          {/* Suggestions */}
+          <div className="content-section" ref={suggestionsRef}>
+            <div className="section-title">
+              SUGGESTIONS
+              <span className="section-count">{(data?.suggestions || []).length}</span>
+            </div>
+            <div className="section-text">
+              {(data?.suggestions || []).length > 0 ? (
+                data.suggestions.map((suggestion, idx) => (
+                  <div key={idx} className="suggestion-item">
+                    <div className="suggestion-title">
+                      <span className="suggestion-number">{idx + 1}.</span>
+                      {suggestion.title || `Suggestion ${idx + 1}`}
+                    </div>
+                    <div className="suggestion-detail">
+                      {suggestion.detail || suggestion.description || 'No details provided'}
+                    </div>
+                    {suggestion.code && (
+                      <div className="code-block">
+                        <div className="code-block-header">RECOMMENDED CODE:</div>
+                        <pre>{suggestion.code}</pre>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="empty-state">No specific suggestions</div>
+              )}
+            </div>
+          </div>
+
+          {/* Code Quality Metrics */}
+          <div className="content-section" ref={metricsRef}>
+            <div className="section-title">CODE QUALITY METRICS</div>
+            <div className="metrics-grid">
+              <div className="metric-item">
+                <div className="metric-bar">
+                  <div className="metric-fill" style={{ width: `${100 - riskScore}%`, backgroundColor: getRiskColor(riskScore) }}></div>
+                </div>
+                <div className="metric-label">Overall Quality</div>
+                <div className="metric-value">{100 - riskScore}%</div>
+              </div>
+              <div className="metric-item">
+                <div className="metric-bar">
+                  <div className="metric-fill" style={{ width: `${Math.min(100, (additions / Math.max(filesChanged, 1)) * 2)}%`, backgroundColor: '#3ecf8e' }}></div>
+                </div>
+                <div className="metric-label">Code Complexity</div>
+                <div className="metric-value">{Math.min(100, Math.round((additions / Math.max(filesChanged, 1)) * 2))}%</div>
+              </div>
+              <div className="metric-item">
+                <div className="metric-bar">
+                  <div className="metric-fill" style={{ width: `${Math.max(0, Math.min(100, 85 - (deletions / Math.max(additions, 1) * 50)))}%`, backgroundColor: '#f5c542' }}></div>
+                </div>
+                <div className="metric-label">Maintainability</div>
+                <div className="metric-value">{Math.max(0, Math.min(100, Math.round(85 - (deletions / Math.max(additions, 1) * 50))))}%</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Section 4: Bottom Bar */}
-      <div className="results-footer">
-        <div className="footer-brand">PRISM</div>
-        <button className="reset-button" onClick={onReset}>
-          ANALYZE ANOTHER PR
-        </button>
-      </div>
+      {/* Reset Button */}
+      <button className="reset-button" ref={buttonRef} onClick={onReset} data-cursor="pointer">
+        ANALYZE ANOTHER PR →
+      </button>
     </div>
-  )
-}
+  );
+};
+
+export default Results;

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import gsap from 'gsap'
 import './Hero.css'
 
-export default function Hero({ onAnalyze, error }) {
+export default function Hero({ onAnalyze, onError }) {
   const [url, setUrl] = useState('')
 
   // Refs for GSAP animations
@@ -17,14 +17,18 @@ export default function Hero({ onAnalyze, error }) {
 
   // GSAP timeline animation on mount
   useEffect(() => {
-    const tl = gsap.timeline()
+    let ctx = gsap.context(() => {
+      const tl = gsap.timeline()
 
-    tl.from(tagRef.current, { y: 20, opacity: 0, duration: 0.6, delay: 0.3 })
-      .from(line1Ref.current, { y: 80, opacity: 0, duration: 0.9, ease: 'power4.out' }, '-=0.2')
-      .from(line2Ref.current, { y: 80, opacity: 0, duration: 0.9, ease: 'power4.out' }, '-=0.7')
-      .from(subtitleRef.current, { y: 20, opacity: 0, duration: 0.6 }, '-=0.4')
-      .from(inputRowRef.current, { y: 20, opacity: 0, duration: 0.6 }, '-=0.3')
-      .from(statsRef.current, { y: 10, opacity: 0, duration: 0.5 }, '-=0.2')
+      tl.from(tagRef.current, { y: 20, opacity: 0, duration: 0.6, delay: 0.3 })
+        .from(line1Ref.current, { y: 80, opacity: 0, duration: 0.9, ease: 'power4.out' }, '-=0.2')
+        .from(line2Ref.current, { y: 80, opacity: 0, duration: 0.9, ease: 'power4.out' }, '-=0.7')
+        .from(subtitleRef.current, { y: 20, opacity: 0, duration: 0.6 }, '-=0.4')
+        .from(inputRowRef.current, { y: 20, opacity: 0, duration: 0.6 }, '-=0.3')
+        .from(statsRef.current, { y: 10, opacity: 0, duration: 0.5 }, '-=0.2')
+    }, heroRef);
+    
+    return () => ctx.revert(); // clean up to fix StrictMode bug!
   }, [])
 
   const handleSubmit = (e) => {
@@ -32,6 +36,8 @@ export default function Hero({ onAnalyze, error }) {
 
     // Validation: check for github.com and /pull/
     if (!url.includes('github.com') || !url.includes('/pull/')) {
+      if (onError) onError('Invalid GitHub PR URL. Must contain github.com and /pull/')
+      
       // Shake animation
       gsap.to(inputRef.current, {
         x: [-8, 8, -6, 6, -4, 4, 0],
@@ -109,13 +115,6 @@ export default function Hero({ onAnalyze, error }) {
             ANALYZE →
           </button>
         </form>
-
-        {/* Error Message */}
-        {error && (
-          <div className="error-message">
-            {error}
-          </div>
-        )}
 
         {/* Stats */}
         <div ref={statsRef} className="stats-row">
