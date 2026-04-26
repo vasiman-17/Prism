@@ -8,8 +8,8 @@
   justify-content: space-between;
   align-items: center;
   z-index: 100;
-  background: linear-gradient(180deg, rgba(5, 5, 8, 0.95) 0%, transparent 100%);
-  backdrop-filter: blur(10px);
+  background: transparent;
+  backdrop-filter: blur(0px);
 }
 
 .navbar-left {
